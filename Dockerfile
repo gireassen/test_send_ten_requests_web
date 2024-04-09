@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "limited_service_with_stop.py"]
+CMD ["python", "test_send_ten_requests_web.py"]
