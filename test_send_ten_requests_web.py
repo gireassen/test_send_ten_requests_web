@@ -19,24 +19,36 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
         ''', 'utf-8'))
 
     def do_POST(self):
-        target_url = self.get_query_param('target_url')
-        if target_url:
-            send_requests(target_url)
-            self.send_response(303)
-            self.send_header('Location', '/result')
-            self.end_headers()
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        if post_data:
+            target_url = self.get_query_param('target_url')
+            if target_url:
+                send_requests(target_url)
+                self.send_response(303)
+                self.send_header('Location', '/result')
+                self.end_headers()
+            else:
+                self.send_response(400)
+                self.send_header('Content-Type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(bytes('Invalid request.', 'utf-8'))
         else:
-            self.send_response(400)
+            self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
-            self.wfile.write(bytes('Invalid request.', 'utf-8'))
+            self.wfile.write(bytes('Empty request.', 'utf-8'))
 
     def get_query_param(self, param):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        parsed_data = urlencode(post_data.decode().split('&')).encode()
-        parsed_params = urlparse(parsed_data)
-        return parsed_params.query.split('=')[1]
+        parsed_params = urlparse(post_data.decode())
+        query_params = parsed_params.query.split('&')
+        for param_pair in query_params:
+            key, value = param_pair.split('=')
+            if key == param:
+                return value
+        return None
 
 def send_requests(target_url):
     for i in range(10):
@@ -49,4 +61,4 @@ def send_requests(target_url):
 if __name__ == '__main__':
     server = socketserver.TCPServer(('', 8000), WebhookHandler)
     print('Server started. Listening on port 8000...')
-    server.serve_forever()
+    server.serve_forever()  
